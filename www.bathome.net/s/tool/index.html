@@ -1,0 +1,1359 @@
+<!DOCTYPE html>
+<html>
+ <head> 
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+  <meta http-equiv="Pragma" CONTENT="max-age=3600">
+  <meta http-equiv="Cache-Control" CONTENT="max-age=3600">
+  <title>批处理之家在线第三方库</title> 
+  <link href="./tool.css" rel="stylesheet" type="text/css" /> 
+  <script src="./MiniTools.js"></script> 
+  <script>
+function IsPC(){
+	return IsPC_test()
+
+	function IsPC_test() {
+		var userAgentInfo = navigator.userAgent;
+		var Agents = ["Android", "iPhone",
+					"SymbianOS", "Windows Phone",
+					"iPad", "iPod"];
+		var flag = true;
+		for (var v = 0; v < Agents.length; v++) {
+			if (userAgentInfo.indexOf(Agents[v]) > 0) {
+				flag = false;
+				break;
+			}
+		}
+		IsPC_test=function(){return flag}
+		return flag;
+	}
+}
+
+function $id(id){
+	return document.getElementById(id)
+}
+
+try{
+	MiniTools.test()
+}
+catch(Err){
+	if(location.hostname=='bcn.bathome.net'){
+		close()
+	} else {
+		document.write('<div style="position:relative top=50%;text-align:center;width:100%">连接出错，正在跳转到 Batch-CN</div>')
+		location.host = 'bcn.bathome.net'
+	}
+}
+
+function string2regexp(str,bSplitSpace){
+	return str.replace(
+		/\W/g,
+		function(c){
+			switch(c){
+				case ' ':return bSplitSpace ? '|' : ' '
+				case '*':return '.*?'
+				case '?':return '.'
+				default:return '\\'+c
+			}
+		}
+	)
+}
+
+var th = [
+	'<th>'+
+	'<th>下载版本</th>'+
+	'<th>代码</th>'+
+	'<th style="width:50%;">说明</th>'+
+	'<th style="width:20%">标签</th>'+
+	'</th>'
+]
+
+var timeout_waitForPeople = 0
+
+window.onkeydown = window.onkeyup = window.onclick = function waitForPeople(){
+	timeout_waitForPeople = setTimeout('timeout_waitForPeople=0',IsPC()?100:1000)
+}
+
+var interval_list2table = void 0
+
+var findInput_cache = {}
+
+function findInput(Name,bForce){
+	if(Name==''){
+		$id('myurl').innerHTML = (location.href.replace(/[#\?].*/,'') + '?' + getMyUrl(false/*localColor!==baseColor*/)).replace(/\?+$/,'')
+		showHelp()
+		return
+	}
+  
+  var isUpdate = false
+
+	var div = $id('table')
+	var toolsList = MiniTools.list()
+	var filterByName = $id('filterByName').checked
+	var filterByHelpString = $id('filterByHelpString').checked
+	var filterByLabel = $id('filterByLabel').checked
+	var versionMode = $id('versionMode').selectedIndex
+	var filterMode = $id('filterMode').selectedIndex
+
+	var cache = {
+		key : Name,
+		filterByName : filterByName,
+		filterByHelpString : filterByHelpString,
+		filterByLabel : filterByLabel,
+		versionMode : versionMode,
+		filterMode : filterMode
+	}
+
+	var ret
+	for(var i in cache){
+		ret = cache[i]===findInput_cache[i]
+		if(!ret)break
+	}
+
+	if(ret&&!bForce)return
+
+  
+  scrollTo(0,0)
+  
+	for(var i in cache){
+		findInput_cache[i] = cache[i]
+	}
+
+	var tr = []
+
+
+	var splitName = Name.replace(/.*\//,'')
+	var splitVersion = /[^\/]\//.test(Name)?Name.replace(/\/+[^\/]*$/,''):''
+
+	var re_Name_gim = /^$/
+	var re_Name_gim_Arr = []
+
+	switch(filterMode){
+		case 0:
+			re_Name_gim.compile(string2regexp(splitName,true),'gim')
+
+			var splitName_Arr = splitName.replace(/^\s+|\s+$/g,'').split(/\s+/)
+			if(splitName_Arr.length>1){
+				for(var i=0;i<splitName_Arr.length;i++){
+					re_Name_gim_Arr.push(/^$/)
+					re_Name_gim_Arr[i].compile(string2regexp(splitName_Arr[i],true),'gim')
+				}
+			}
+
+			break
+		case 1:
+			re_Name_gim.compile(string2regexp(splitName,true),'gim');break
+		case 2:
+			re_Name_gim.compile('^'+string2regexp(splitName,true),'gim');break
+		case 3:
+			re_Name_gim.compile(string2regexp(splitName,true)+'$','gim');break
+		case 4:
+			re_Name_gim.compile('^'+string2regexp(splitName,true)+'$','gim');break
+	}
+
+	var re_Version_gim = Name.replace(/.*\//,'')
+
+	if(interval_list2table!==void 0)clearInterval(interval_list2table)
+
+	var toolListArr_matchbegin = []
+	var toolListArr_match = []
+	var toolListArr_nomatch = []
+
+	for(var i in toolsList){
+		if(!/\//.test(i))continue
+		var name_search = toolsList[i].name.search(re_Name_gim)
+    var indexName = toolsList[i].name.toLowerCase()
+    
+    var obj_tool = {
+        i:i,
+        name_search:name_search,
+        indexName:indexName,
+        version_from:toolsList[i].version_from,
+        version_id:toolsList[i].version_id
+      }
+    
+		if(name_search==0){
+			toolListArr_matchbegin.push(obj_tool)
+		} else if(name_search>0){
+			toolListArr_match.push(obj_tool)
+		} else {
+			toolListArr_nomatch.push(obj_tool)
+		}
+	}
+
+  toolListArr_matchbegin = toolListArr_matchbegin.sort(sort_by_version)
+  toolListArr_match = toolListArr_match.sort(sort_by_version)
+  toolListArr_nomatch = toolListArr_nomatch.sort(sort_by_version)
+  
+  function sort_by_version(tool1,tool2){
+    if(tool1.indexName == tool2.indexName)return MiniTools._cmpVersion(tool2.version_id,tool1.version_id)
+    return tool1.indexName > tool2.indexName ? 1 : -1
+  }
+  
+	var toolListArr = toolListArr_matchbegin.concat(toolListArr_match,toolListArr_nomatch)
+
+	count_list2table = 0
+  
+	var waitForLook = 1
+	interval_list2table = setInterval(list2table,1)
+
+	function list2table(){
+		if(timeout_waitForPeople)return
+
+		if(tr.length>300 && waitForLook){
+			if(document.body.scrollHeight - document.body.scrollTop > window.screen.height){
+				return
+			} else {
+				waitForLook = 0
+			}
+		}
+
+		nextTool:
+		for(var count=10;count--&&toolListArr.length;){
+			var obj_toolListArr=toolListArr.shift()
+			var i=obj_toolListArr.i
+			var name_search=obj_toolListArr.name_search
+
+			if(splitVersion){
+				var ret = MiniTools._cmpVersion(
+					/,/.test(splitVersion) ? toolsList[i].version : toolsList[i].version.replace(/^.*,/,''),
+					splitVersion
+				)
+
+				if(ret===true)
+					'Show All Version'
+				else if(ret===false)
+					continue
+				else if(versionMode==0&&ret)
+					continue
+				else if(versionMode==1&&ret>0)
+					continue
+				else if(versionMode==2&&ret<0)
+					continue
+				else if(versionMode==3&&ret<=0)
+					continue
+			}
+
+
+			var test_Arr = []
+			var isTrue = 0
+
+			if(filterByName){
+				if(name_search>=0)isTrue=1
+				test_Arr.push(toolsList[i].name)
+			}
+
+			if(filterByHelpString){
+				if(toolsList[i].helpString.search(re_Name_gim)>=0)isTrue=1
+				test_Arr.push(toolsList[i].helpString)
+			}
+
+			if(filterByLabel){
+				if(toolsList[i].label.search(re_Name_gim)>=0)isTrue=1
+				test_Arr.push(toolsList[i].label)
+			}
+
+			if(!isTrue)continue
+
+			if(filterMode==0){
+				var test_String = test_Arr.join('\n')
+				for(var j=0;j<re_Name_gim_Arr.length;j++){
+					if(test_String.search(re_Name_gim_Arr[j])<0)continue nextTool
+				}
+			}
+      
+			var indexName = toolsList[i].indexName
+
+			tr.push(
+				'<tr>'+
+				'<td class="indexName" indexName="'+toolsList[i].name.toLowerCase()+'">'+toolsList[i].name.replace(filterByName?re_Name_gim:/^$/,'<font class=highlight>$&</font>')+'</td>'+
+				'<td><a class="'+(toolsList[i].priority?'priority':'notpriority')+'" href='+toolsList[i].bathomePath+'>'+toolsList[i].version+'</a></td>'+
+				'<td style="white-space:nowrap;"><font size=1><a href=# onclick=\'getCode(decodeURIComponent("'+encodeURIComponent(i)+'"),"BAT");return false\'>BAT</a> / <a href=# onclick=\'getCode(decodeURIComponent("'+encodeURIComponent(i)+'"),"HTA");return false\'>HTA</a></font></td>'+
+				'<td>'+(toolsList[i].websiteUrl?'<a class="websiteUrl" target="_blank" href="'+toolsList[i].websiteUrl+'">来源</a> ':'')+toolsList[i].helpString.replace(filterByHelpString?re_Name_gim:/^$/,'<font class=highlight>$&</font>')+'</td>'+
+				'<td><div class="tool_labels"><font  size=2>'+toolsList[i].label.replace(filterByLabel?re_Name_gim:/^$/,'<font class=highlight>$&</font>')+'</font></div></td>'+
+				'</tr>'
+			)
+      
+      isUpdate = true
+		}
+
+    if(toolListArr.length){
+      if(isUpdate){
+        if(count_list2table>=10||tr.length>=20){
+          div.innerHTML = '<table>'+th+tr.join('')+'<tr><td align="center" colspan="5"><div class=textcenter>还在匹配中，请耐心等待...</div></td></tr></table>'
+          merge_same_name()
+          isUpdate = false
+        }
+      }
+    } else {
+      div.innerHTML = tr.length ? '<table>'+th+tr.join('')+'</table>' : '<table>'+th+'<tr><td align="center" colspan="5"><div class=textcenter>无匹配项</div></td></tr></table>'
+      clearInterval(interval_list2table)
+      merge_same_name()
+    }
+    
+		count_list2table++
+	}
+  
+  function merge_same_name(){
+    // 这段用于合并相邻同名工具的名称
+    try{
+      var ele_indexName = document.getElementsByClassName('indexName')
+      
+      for(var i_tn=0; i_tn<ele_indexName.length-1;i_tn++){
+        var this_ele = ele_indexName[i_tn]
+        var next_ele = ele_indexName[i_tn+1]
+        var this_indexName = this_ele.getAttribute('indexName')
+        var next_count = 0
+
+        while(next_ele && this_indexName == next_ele.getAttribute('indexName')){
+          next_ele.style.display='none'
+          i_tn ++ , next_count ++
+          var next_ele = ele_indexName[i_tn]
+        }
+        if(next_count)this_ele.setAttribute('rowspan', next_count)
+      }
+    }
+    catch(Err){}
+  }
+}
+</script> 
+  <script>
+var GetRequest = (function(){
+	var location_search = location.search
+
+	if(document.referrer.search(/^http:\/\/[^\\\/]*\.bathome\.net\//i)<0){
+		try{
+			location_search = decodeURIComponent(location_search)
+			return GetRequest
+		}
+		catch(Err){}
+	}
+
+	urldecode(location_search,'gbk',function(s){location_search=s;})
+
+	return GetRequest
+
+	function urldecode(str, charset, callback) {
+		var randKey = Math.floor(Math.random()*10000000)
+		str = str.replace(/"/g,'%22')
+		str = str.replace(/%[0-7][0-9A-F]/ig,'\\$&')
+		window['_urlDecodeFn_'+randKey] = callback;
+		var script = document.createElement('script');
+		script.id = '_urlDecodeFn_'+randKey;
+		var src = 'data:text/javascript;charset=' + charset + ',_urlDecodeFn_'+randKey+'("' + str + '");'
+		src += 'document.getElementById("_urlDecodeFn_'+randKey+'").parentNode.removeChild(document.getElementById("_urlDecodeFn_'+randKey+'"));';
+		script.src = src;
+		document.getElementsByTagName('head')[0].appendChild(script);
+	}
+
+	function GetRequest(search) {
+		var url = search ? search : location_search;
+		var theRequest = new Object();
+		if (url.indexOf("?") != -1) {
+			var str = url.substr(1);
+			if (str.indexOf("&") != -1) {
+				strs = str.split("&");
+				for (var i = 0; i < strs.length; i++) {
+					var split = strs[i].split("=")
+					theRequest[split[0]] = decodeURIComponent(split[1] || '');
+				}
+			} else {
+				var split = str.split("=")
+				theRequest[split[0]] = decodeURIComponent(split[1] || '');
+			}
+		}
+		return theRequest;
+	}
+})()
+  </script>
+ </head> 
+ <body style="padding: 0px" onclick="layerdiv.style.display='none'" onmousewheel="layerdiv.style.display='none'"> 
+  <div class="headdiv" id="headdiv" style="padding: 20px 0px"> 
+   <div style="margin: auto;width:100%;max-width:1200px;min-width:900px;position:relative; padding: 30px 10px 0px 12px;"> 
+    <div style="float:left;"> 
+     <div> 
+      <div style="float:left;width:120px;text-align:center;color:white;font-size:1.2em;font-weight:bold;"> 
+       <div id="about" style="background:#469CE8;line-height:40px;">
+         关键词 
+       </div> 
+      </div> 
+      <input type="text" id="key" onkeyup="freshTable();" onchange="freshTable();pushState()" onpaste="setTimeout(freshTable,10);" placeholder="请输入 版本/关键词 (版本可省略)" class="inputkey" /> 
+     </div> 
+    </div> 
+    <div style="float:right;width:300px"> 
+     <input type="checkbox" id="filterByName" onchange="freshTable(true)" value="filterByName" checked="checked" /> 匹配名称 
+     <input type="checkbox" id="filterByHelpString" onchange="freshTable(true)" value="filterByHelpString" checked="checked" /> 匹配说明 
+     <input type="checkbox" id="filterByLabel" onchange="freshTable(true)" value="filterByLabel" checked="checked" /> 匹配标签 
+     <div style="float:left;margin:10px 0px"> 
+      <select id="filterMode" onchange="freshTable(true)"> <option value="PartOr" selected="selected">局部与匹配</option> <option value="PartAnd">局部或匹配</option> <option value="Start">头部匹配</option> <option value="End">尾部匹配</option> <option value="All">完全匹配</option> </select> 
+      <select id="versionMode" onchange="freshTable(true)"> <option value="Equ" selected="selected">等于指定版本</option> <option value="Leq">不高于指定版本</option> <option value="Geq">不低于指定版本</option> <option value="Gtr">高于指定版本</option> </select> 
+     </div> 
+     <div style="float:right;margin:10px 5px"> 
+      <input id="more" type="button" value="更多功能" style="width:70px;margin:0px;text-align:center;" /> 
+     </div> 
+    </div> 
+   </div> 
+   <div id="demo" style="overflow:hidden;width:100%;position:absolute; top:105px"> 
+    <table class="hide" style="width:120%;max-width:120%;"> 
+     <tbody> 
+      <tr class="hide"> 
+       <td id="demo1" valign="top" class="hide" style="width:10%;"> 
+        <div style="margin-top:auto;width:100%;background:#469CE8;"></div> </td> 
+       <td id="demo2" valign="top" class="hide" style="width:10%;"></td> 
+       <td id="demo3" valign="top" class="hide" style="width:10%;"></td> 
+       <td id="demo4" valign="top" class="hide" style="width:10%;"></td> 
+       <td id="demo5" valign="top" class="hide" style="width:10%;"></td> 
+       <td id="demo6" valign="top" class="hide" style="width:10%;"></td> 
+       <td id="demo7" valign="top" class="hide" style="width:10%;"></td> 
+       <td id="demo8" valign="top" class="hide" style="width:10%;"></td> 
+       <td id="demo9" valign="top" class="hide" style="width:10%;"></td> 
+       <td id="demo10" valign="top" class="hide" style="width:10%;"></td> 
+      </tr> 
+     </tbody> 
+    </table> 
+   </div> 
+  </div> 
+  <div id="layerdiv" class="layerdiv" style="display:none"> 
+   <div id="textdiv" class="textdiv"> 
+    <div id="textpre_shadow" class="textpre_shadow"></div> 
+    <div id="textpre" class="textpre" style="dispaly:table;"> 
+     <div class="tableTable"> 
+      <div class="tableRow"> 
+       <div class="tableL"> 
+        <b>个性主题</b> 
+       </div> 
+       <div class="tableR"> 
+        <div id="choicecolor" onmouseout="$id('about').innerHTML = '关键词'"> 
+         <div onclick="colors_onclick(this.innerText)" onmouseover="colors_onmouseover(this)" onmouseout="colors_onmouseout()" style="background:#469CE8">
+           #469CE8 
+         </div> 
+         <div onclick="colors_onclick(this.innerText)" onmouseover="colors_onmouseover(this)" onmouseout="colors_onmouseout()" style="background:#76CECE;">
+           #76CECE 
+         </div> 
+         <div onclick="colors_onclick(this.innerText)" onmouseover="colors_onmouseover(this)" onmouseout="colors_onmouseout()" style="background:#09BD81;">
+           #09BD81 
+         </div> 
+         <div onclick="colors_onclick(this.innerText)" onmouseover="colors_onmouseover(this)" onmouseout="colors_onmouseout()" style="background:#ECCE73;">
+           #ECCE73 
+         </div> 
+         <div onclick="colors_onclick(this.innerText)" onmouseover="colors_onmouseover(this)" onmouseout="colors_onmouseout()" style="background:#FF9C44;">
+           #FF9C44 
+         </div> 
+         <div onclick="colors_onclick(this.innerText)" onmouseover="colors_onmouseover(this)" onmouseout="colors_onmouseout()" style="background:#EF362C;">
+           #EF362C 
+         </div> 
+         <div onclick="colors_onclick(this.innerText)" onmouseover="colors_onmouseover(this)" onmouseout="colors_onmouseout()" style="background:#AD498C;">
+           #AD498C 
+         </div> 
+         <div onclick="colors_onclick(this.innerText)" onmouseover="colors_onmouseover(this)" onmouseout="colors_onmouseout()" style="background:#7785B9;">
+           #7785B9 
+         </div> 
+         <div onclick="colors_onclick(this.innerText)" onmouseover="colors_onmouseover(this)" onmouseout="colors_onmouseout()" style="background:#2F61AF;">
+           #2F61AF 
+         </div> 
+         <div onclick="colors_onclick(this.innerText)" onmouseover="colors_onmouseover(this)" onmouseout="colors_onmouseout()" style="background:#444444;">
+           #444444 
+         </div> 
+        </div> 
+       </div> 
+      </div> 
+      <div class="tableRow"> 
+       <div class="tableL"> 
+        <b>自定义</b> 
+       </div> 
+       <div class="tableR"> 
+        <input type="button" value="重置设置" class="textdiv_button" style="width:70px;" onclick="clearSetting()" /> 
+        <input type="button" value="记住设置" class="textdiv_button" style="width:70px;" onclick="saveSetting(365)" /> 
+        <input type="button" value="帮助" class="textdiv_button" style="width:40px;" onclick="location.href=location.href.replace(/[#\?].*/,'')+'#QuestionHelp'" /> 
+       </div> 
+      </div> 
+      <div class="tableRow"> 
+       <div class="tableL"> 
+        <b>分享地址</b> 
+       </div> 
+       <div class="tableR"> 
+        <textarea id="myurl" style="width:190px;height:70px;max-width:190px;max-height:100px;resize:none;" oncopy="return testUrl(this.value);"></textarea> 
+       </div> 
+      </div> 
+      <div class="tableRow"> 
+       <div class="tableL"> 
+        <b>同源工具</b> 
+       </div> 
+       <div class="tableR"> 
+        <a href="http://www.bathome.net/viewthread.php?tid=32322" onclick="location.href=this.href">bcn</a>
+        <span class="project-info"> - 命令行第三方下载工具</span>
+        <br />
+        <a href="http://www.bathome.net/viewthread.php?tid=44020" onclick="location.href=this.href">pkg</a>
+        <span class="project-info"> - 命令行离线包管理工具</span>
+        <br />
+        <a href="http://www.bathome.net/viewthread.php?tid=34544&page=1#pid163484" onclick="location.href=this.href">GUI端</a>
+        <span class="project-info"> - 基于hta的下载工具</span>
+        <br />
+        <a href="http://www.bathome.net/thread-36408-1-1.html" onclick="location.href=this.href">网页端</a>
+        <span class="project-info"> - 第三方在线脚本库</span>
+       </div> 
+      </div> 
+     </div> 
+    </div> 
+   </div> 
+  </div> 
+  <div class="bodydiv"> 
+   <br /> 
+   <div id="table" class="lightTableDiv" style="padding:15px 0px 15px 0px;display:none;"></div> 
+   <div id="help"> 
+    <div id="LinkHelp" class="light"> 
+     <br /> 
+     <h4>常用第三方</h4> 
+     <a class="priority" href="?down&amp;key=bcn">bcn - 第三方下载工具<span></a>&nbsp; 
+     <a class="priority" href="?down&amp;key=pkg">pkg - 离线包管理工具</a>&nbsp; 
+     <a class="notpriority" href="?down&amp;key=sed">sed</a>&nbsp; 
+     <a class="notpriority" href="?down&amp;key=grep">grep</a>&nbsp; 
+     <a class="notpriority" href="?down&amp;key=gawk">gawk</a>&nbsp; 
+     <a class="notpriority" href="?down&amp;key=iconv">iconv</a>&nbsp; 
+     <a class="notpriority" href="?down&amp;key=curl">curl</a>&nbsp; 
+     <a class="notpriority" href="?down&amp;key=wget">wget</a>&nbsp; 
+     <a class="notpriority" href="?down&amp;key=nircmdc">nircmdc</a>&nbsp; 
+     <a class="notpriority" href="?down&amp;key=rar">rar</a> 
+     <br /> 
+     <br /> 
+     <br /> 
+    </div> 
+    <div id="KeyHelp" class="light"> 
+     <br /> 
+     <h4>搜索语法</h4> 
+     <div>
+       输入 grep 检索名称、说明、标签中包含 grep 的条目，可指定关键词匹配方式和匹配项目 
+     </div> 
+     <div>
+       支持通配符： ? 表示任意字符 * 表示任意长度的任意字符，允许以空格分隔多个字符串条件 
+     </div> 
+     <div>
+       例如输入 grep 检索名称包含 grep 的条目 
+     </div> 
+     <br /> 
+     <div>
+       在第一个 / 号之前的部分被解析为版本号，可指定版本的匹配方式，不支持通配符 
+     </div> 
+     <div>
+       例如输入 2.5.1/grep 可筛选版本为 2.5.1 且名称包含 grep 的条目 
+     </div> 
+     <a href="http://www.bathome.net/s/tool/index.html" onclick="location.hostname=/bcn/i.test(location.hostname)?'www.bathome.net':'bcn.bathome.net';return false" style="font-size:0.8em;color:gray;float:right">[单击切换<span id="hostname">主站</span>]</a>
+     <br /> 
+     <br /> 
+    </div> 
+    <div id="QuestionHelp" class="light"> 
+     <br /> 
+     <h4>常见问题</h4> 
+     <div class="QuestionHelpTable"> 
+      <br /> 
+      <br /> 
+      <div style="display: table;border-collapse: separate;width: 100%;"> 
+       <div style="display:table-row;"> 
+        <div style="display:table-cell;width:50%"> 
+         <div> 
+          <div style="float:left;width:35px;"> 
+           <h5>Q: </h5> 
+          </div> 
+          <div style="float:left;width:320px;"> 
+           <h6>如何搜索第三方工具？</h6> 
+          </div> 
+          <div style="clear:both"> 
+          </div> 
+          <div style="float:left;width:35px;"> 
+           <h5>A: </h5> 
+          </div> 
+          <div style="float:left;width:320px;"> 
+           <span class="answer"> 在搜索框中输入搜索条件，即时显示匹配项（详见搜索语法），右侧设置匹配规则 </span> 
+          </div> 
+          <div style="clear:both"> 
+          </div> 
+         </div> 
+         <br /> 
+         <br /> 
+         <div> 
+          <div style="float:left;width:35px;"> 
+           <h5>Q: </h5> 
+          </div> 
+          <div style="float:left;width:320px;"> 
+           <h6>搜索到结果后要如何下载？</h6> 
+          </div> 
+          <div style="clear:both"> 
+          </div> 
+          <div style="float:left;width:35px;"> 
+           <h5>A: </h5> 
+          </div> 
+          <div style="float:left;width:320px;"> 
+           <span class="answer"> 在结果列表中单击版本号下载对应文件，蓝底白字的版本为推荐版本，未指定版本号时优先使用此链接 </span> 
+          </div> 
+          <div style="clear:both"> 
+          </div> 
+         </div> 
+         <br /> 
+         <br /> 
+         <div> 
+          <div style="float:left;width:35px;"> 
+           <h5>Q: </h5> 
+          </div> 
+          <div style="float:left;width:320px;"> 
+           <h6>可以保存当前选项为默认设置吗？</h6> 
+          </div> 
+          <div style="clear:both"> 
+          </div> 
+          <div style="float:left;width:35px;"> 
+           <h5>A: </h5> 
+          </div> 
+          <div style="float:left;width:320px;"> 
+           <span class="answer"> 点击右上方的 <input type="button" value="更多功能" style="width:70px;margin:0px;text-align:center;" /> 按钮，在弹出的面板中点击 <input type="button" value="记住设置" style="width:70px;margin:0px;text-align:center;" /> 按钮 </span> 
+          </div> 
+          <div style="clear:both"> 
+          </div> 
+         </div> 
+         <br /> 
+         <br /> 
+        </div> 
+        <div style="display:table-cell;width:50%"> 
+         <div> 
+          <div style="float:left;width:35px;"> 
+           <h5>Q: </h5> 
+          </div> 
+          <div style="float:left;width:320px;"> 
+           <h6>如何将当前搜索结果分享给朋友？</h6> 
+          </div> 
+          <div style="clear:both"> 
+          </div> 
+          <div style="float:left;width:35px;"> 
+           <h5>A: </h5> 
+          </div> 
+          <div style="float:left;width:320px;"> 
+           <span class="answer"> 点击右上方的 <input type="button" value="更多功能" style="width:70px;margin:0px;text-align:center;" /> 按钮，在弹出的面板中有实时更新的分享地址 </span> 
+          </div> 
+          <div style="clear:both"> 
+          </div> 
+         </div> 
+         <br /> 
+         <br /> 
+         <div> 
+          <div style="float:left;width:35px;"> 
+           <h5>Q: </h5> 
+          </div> 
+          <div style="float:left;width:320px;"> 
+           <h6>输入关键词后，为什么没反应？</h6> 
+          </div> 
+          <div style="clear:both"> 
+          </div> 
+          <div style="float:left;width:35px;"> 
+           <h5>A: </h5> 
+          </div> 
+          <div style="float:left;width:320px;"> 
+           <span class="answer">1.顶部是否有与页面等宽的蓝色线条，若看不见蓝条，请确认 Javascript 是否被禁用； <br />2.顶部是否有蓝色粗线，若仍在滚动说明正在加载列表，请耐心等待； <br />3.点击更多功能中的 <input type="button" value="重置设置" style="width:70px;margin:0px;text-align:center;" /> 按钮，重新输入关键词再试 <br />若仍无反应，请<a href="http://www.bathome.net/thread-36408-1-1.html">到批处理之家反馈</a> </span> 
+          </div> 
+          <div style="clear:both"> 
+          </div> 
+         </div> 
+        </div> 
+       </div> 
+      </div> 
+     </div> 
+     <br /> 
+     <br /> 
+     <br /> 
+    </div>    <div id="UrlHelp" class="light"> 
+     <br /> 
+     <h4>url参数语法</h4> 
+     <div>
+       基本语法如 http://bcn.bathome.net/s/tool/index.html?参数1=值1&amp;参数2=值2&amp;参数N=值N 
+      <br />各项参数的功能参见下表 
+     </div> 
+     <br /> 
+     <table> 
+      <tbody> 
+       <tr> 
+        <th style="width:260px">参数=&lt;值&gt;</th> 
+        <th>说明</th> 
+        <th>实例</th> 
+       </tr> 
+       <tr> 
+        <td>key=&lt;var&gt;</td> 
+        <td>设置默认关键词为 &lt;var&gt;</td> 
+        <td id="example" rowspan="8"><a href="http://bcn.bathome.net/s/tool/index.html">http://bcn.bathome.net/s/tool/index.html</a><br /> //打开主页面<br /><br /> <a href="http://bcn.bathome.net/s/tool/index.html?key=%cf%c2%d4%d8&amp;filterby=help,label">http://bcn.bathome.net/s/tool/index.html?key=下载&amp;filterby=help,label</a><br /> //在帮助信息和标签中搜索关键词“下载”<br /><br /> <a href="http://bcn.bathome.net/s/tool/index.html?key=4.1/s&amp;keymode=2&amp;vermode=2">http://bcn.bathome.net/s/tool/index.html?key=4.1/s&amp;keymode=2&amp;vermode=2</a><br /> //筛选出名称以 s 开头且版本号不低于 4.1 的项目<br /><br /> <a href="http://bcn.bathome.net/s/tool/index.html?down=tcc">http://bcn.bathome.net/s/tool/index.html?down=tcc</a><br /> //下载 tcc<br /><br /> <a href="http://bcn.bathome.net/s/tool/index.html?bat=grep">http://bcn.bathome.net/s/tool/index.html?bat=grep</a><br /> //生成下载 grep 的 bat 代码<br /><br /> <a href="http://bcn.bathome.net/s/tool/index.html?hta=grep">http://bcn.bathome.net/s/tool/index.html?hta=grep</a><br /> //生成下载 grep 的 hta 代码<br /><br /> <a href="http://bcn.bathome.net/s/tool/index.html?color=%23F00000">http://bcn.bathome.net/s/tool/index.html?color=%23F00000</a><br /> //设置配色为 #F00000<br /></td> 
+       </tr> 
+       <tr> 
+        <td>filterby=&lt;var1&gt;,&lt;var2&gt;,&lt;var3&gt;</td> 
+        <td>设置关键词为 &lt;var1&gt; &lt;var2&gt; &lt;var3&gt;，可多选<br />可选项有 name,help,lable<br />或其对应中文名 名称, 说明, 标签<br />或者使用中文全称 匹配名称, 匹配说明, 匹配标签</td> 
+       </tr> 
+       <tr> 
+        <td>vermode=&lt;var&gt;</td> 
+        <td>设置版本号检索模式为 &lt;var&gt;<br />可选项有 0,1,2,3<br />或其对应中文名 等于, 不高于, 不低于, 高于<br />或者使用中文全称 等于指定版本, 不高于指定版本, 不低于指定版本, 高于指定版本</td> 
+       </tr> 
+       <tr> 
+        <td>keymode=&lt;var&gt;</td> 
+        <td>设置关键词检索模式为 &lt;var&gt;<br />可选项有 0,1,2,3,4<br />或其对应中文名 局部与, 局部或, 头部, 尾部, 完全<br />或者使用中文全称 局部与匹配, 局部或匹配, 头部匹配, 尾部匹配, 完全匹配</td> 
+       </tr> 
+       <tr> 
+        <td>down=&lt;var&gt;</td> 
+        <td>下载 &lt;var&gt;，若为空，则使用 key 的 &lt;var&gt;</td> 
+       </tr> 
+       <tr> 
+        <td>bat=&lt;var&gt;</td> 
+        <td>显示获取 &lt;var&gt; 的 bat 代码</td> 
+       </tr> 
+       <tr> 
+        <td>hta=&lt;var&gt;</td> 
+        <td>显示获取 &lt;var&gt; 的 hta 代码</td> 
+       </tr> 
+       <tr> 
+        <td>color=&lt;var&gt;</td> 
+        <td>设置配色为 &lt;var&gt;<br />可选项为任意 html 颜色格式，以下三者是等价的<br />green, rgb(0,255,0), %2300FF00 （# 需转义为 %23）</td> 
+       </tr> 
+      </tbody> 
+     </table> 
+     <br /> 
+     <br /> 
+    </div> 
+    <div id="Team" class="light"> 
+     <br /> 
+     <h4>项目合作者</h4> 
+     <div> 
+      <div>改进与维护： CrLf, bailong360, happy886rr, Batcher</div> 
+      <div>推荐和建议： templinshi, 依山居, tigerpower</div> 
+      <br /> 
+      <div>[所有人员均来自<a href="http://www.bathome.net">批处理之家</a>]</div> 
+     </div> 
+     <br /> 
+     <br /> 
+     <a href="http://www.bathome.net"> <img src="http://bbs.bathome.net/images/default/LinkLogo.gif" href="http://bbs.bathome.net" alt="批处理之家" /> </a> 
+     <br /> 
+     <br /> 
+    </div> 
+   </div> 
+   <script>
+
+if(/bcn/i.test(location.hostname)){
+	$id('hostname').innerHTML = '到稳定版'
+} else {
+	$id('hostname').innerHTML = '到测试版'
+	$id('UrlHelp').innerHTML = $id('UrlHelp').innerHTML.replace(/http:\/\/bcn\.bathome\.net\/s\/tool\/index\.html/gi,location.href.replace(/[#\?].*/,''))
+}
+
+$id('key').focus()
+  </script> 
+   <script>
+MiniTools.list()
+
+var localColor = '#469CE8'
+var baseColor = localColor
+
+loading__()
+checkUrlArgv()
+setBaseColor(baseColor)
+
+window.onpopstate = function(){
+	checkUrlArgv()
+
+	if(event.state){
+		var state = event.state
+
+		$id('filterByName').checked = !! state.filterByName
+		$id('filterByHelpString').checked = !! state.filterByHelpString
+		$id('filterByLabel').checked = !! state.filterByLabel
+		$id('versionMode').selectedIndex = ~~ state.versionMode
+		$id('filterMode').selectedIndex = ~~ state.filterMode
+
+		$id('key').value=state.key || ''
+		setBaseColor(baseColor = state.color)
+	}
+}
+
+
+function loading__(){
+	var speed=10
+	var n_borderLeft=2
+	var n_Height=10
+
+	var demo = $id('demo')
+
+	var headdiv = $id('headdiv')
+
+	var demo10 = $id('demo10')
+	var demo9 = $id('demo9')
+	var demo8 = $id('demo8')
+	var demo7 = $id('demo7')
+	var demo6 = $id('demo6')
+	var demo5 = $id('demo5')
+	var demo4 = $id('demo4')
+	var demo3 = $id('demo3')
+	var demo2 = $id('demo2')
+	var demo1 = $id('demo1')
+
+	demo10.innerHTML=demo9.innerHTML=demo8.innerHTML=
+	demo7.innerHTML=demo6.innerHTML=demo5.innerHTML=
+	demo4.innerHTML=demo3.innerHTML=demo2.innerHTML=demo1.innerHTML
+
+	var interval_checkData = setInterval(checkData,50)
+
+	setDemoHeight(n_Height)
+	setDemoBorderLeft(n_borderLeft,'#f7f7f7')
+	headdiv.style.borderBottom="none"
+	$id('myurl').innerHTML = (location.href.replace(/[#\?].*/,'') + '?' + getMyUrl(false/*localColor!==baseColor*/)).replace(/\?+$/,'')
+
+	$id('more').onclick = function(e){
+		if(layerdiv.style.display!=='block'){
+			layerdiv.style.display='block'
+			stopDefault(e)
+		}
+	}
+
+	$id('textdiv').onclick =
+	$id('textdiv').onmousewheel = stopDefault
+
+	function Marquee(){
+		if(demo2.offsetWidth-demo.scrollLeft<=0)//当滚动至demo1与demo2交界时
+			demo.scrollLeft-=demo1.offsetWidth//demo跳到最顶端
+		else
+			demo.scrollLeft++  //如果是横向的 将 所有的 height top 改成 width left
+	}
+	var MyMar=setInterval(Marquee,speed)//设置定时器
+
+	//demo.onmouseover=function() {clearInterval(MyMar)}//鼠标移上时清除定时器达到滚动停止的目的
+	//demo.onmouseout=function() {MyMar=setInterval(Marquee,speed)}//鼠标移开时重设定时器
+
+	function shrinkDemo(){
+		if(n_Height <= 0) {
+			clearInterval(MyMar)
+			return
+		}
+
+		$id('key').placeholder = "请输入 版本/关键词 (版本可省略)，"+MiniTools._text().match(/^Rem 以上(共计\d+个第三方)/m)[1]
+
+		demo.style.top = (demo.offsetTop+1) + 'px'
+		setDemoHeight(--n_Height)
+		setDemoBorderLeft(--n_borderLeft,'#F7F7F7')
+
+		if(n_Height<=2||n_borderLeft==0)
+			headdiv.style.borderBottom="2px solid "+baseColor
+
+		setTimeout(function(){shrinkDemo()},20)
+	}
+
+	function setDemoHeight(n){
+		if(n>=0){
+			demo10.getElementsByTagName('div')[0].style.height=
+			demo9.getElementsByTagName('div')[0].style.height=
+			demo8.getElementsByTagName('div')[0].style.height=
+			demo7.getElementsByTagName('div')[0].style.height=
+			demo6.getElementsByTagName('div')[0].style.height=
+			demo5.getElementsByTagName('div')[0].style.height=
+			demo4.getElementsByTagName('div')[0].style.height=
+			demo3.getElementsByTagName('div')[0].style.height=
+			demo2.getElementsByTagName('div')[0].style.height=
+			demo1.getElementsByTagName('div')[0].style.height= n+'px'
+		}
+	}
+
+	function setDemoBorderLeft(n,color){
+		if(n>=0){
+			demo10.style.borderLeft=
+			demo9.style.borderLeft=
+			demo8.style.borderLeft=
+			demo7.style.borderLeft=
+			demo6.style.borderLeft=
+			demo5.style.borderLeft=
+			demo4.style.borderLeft=
+			demo3.style.borderLeft=
+			demo2.style.borderLeft=
+			demo1.style.borderLeft= n + 'px solid ' + color
+		}
+	}
+
+	function setDemoBackground(background){
+		demo10.style.background=
+		demo9.style.background=
+		demo8.style.background=
+		demo7.style.background=
+		demo6.style.background=
+		demo5.style.background=
+		demo4.style.background=
+		demo3.style.background=
+		demo2.style.background=
+		demo1.style.background= background
+	}
+
+	function checkData(){
+		if(MiniTools.list()===false){
+			baseColor = '#CCCCCC'
+			shrinkDemo()
+			$id('about').style.background = baseColor
+			setDemoBackground(baseColor)
+			headdiv.style.borderBottom="2px solid "+baseColor
+			interval_checkData=clearInterval(interval_checkData)
+		} else if(MiniTools._text()){
+			shrinkDemo()
+			interval_checkData=clearInterval(interval_checkData)
+		}
+	}
+}
+
+function checkUrlArgv(search){
+	var theRequest = GetRequest(search)
+
+	if(getCookie('s')){
+		var cookie_theRequest = GetRequest('?'+getCookie('s'))
+		if(('key' in theRequest)||('filterby' in theRequest)||('vermode' in theRequest)||('keymode' in theRequest)){
+			theRequest['color'] = cookie_theRequest['color']
+			cookie_theRequest = {}
+		}
+
+		for(var i in cookie_theRequest){
+			if(!(i in theRequest))theRequest[i]=cookie_theRequest[i]
+		}
+	}
+
+	if(('down' in theRequest) && (theRequest['down'] == void 0)){
+		theRequest['down'] = theRequest['key']
+	}
+
+	var interval_urlargv = setInterval(
+		function(){
+			if(!MiniTools._text().length)return
+
+			interval_urlargv=clearInterval(interval_urlargv)
+
+			if(MiniTools.find(theRequest.down)){location.href=MiniTools.find(theRequest.down).bathomePath}
+			if(MiniTools.find(theRequest.bat)){getCode(theRequest.bat,'BAT');return}
+			if(MiniTools.find(theRequest.hta)){getCode(theRequest.hta,'HTA');return}
+
+			freshTable()
+		},
+		100
+	)
+
+	if(theRequest.color){
+		setBaseColor(theRequest.color)
+
+		if($id('headdiv').style.borderBottomColor != ''){
+			baseColor = theRequest.color
+		} else {
+			setBaseColor(baseColor)
+		}
+	}
+
+	if('batch-cn' in theRequest){
+		var match = theRequest['batch-cn'].match(/^(?:[\s]+|\+)?([-a-zA-Z0-9]+)(?:[\s]+|\+)([-a-zA-Z0-9]+)(?:[\s]+|\+)?$/)
+		if(match){
+			switch(match[1].toLowerCase()){
+				case 'get-tool':
+				case 'get':
+				case 'gt':
+					theRequest = Batch_CN(theRequest,match[2]?match[2]:'*',0,3,true)
+					break
+				case 'find-tool':
+				case 'find':
+				case 'ft':
+					theRequest = Batch_CN(theRequest,match[2],0,0,false)
+					break
+				case 'list':
+					theRequest = Batch_CN(theRequest,'*',false)
+					break
+			}
+		}
+	}
+
+
+	if('key' in theRequest){
+		$id('key').value=theRequest.key
+	}
+
+	if('filterby' in theRequest){
+		var filterby = theRequest.filterby.split(/,/g)
+
+		if(filterby.length){
+			$id('filterByName').checked=
+			$id('filterByHelpString').checked=
+			$id('filterByLabel').checked=false
+		}
+
+		for(var i=0;i<filterby.length;i++){
+			switch(filterby[i]){
+				case 'name':
+				case '名称':
+				case '匹配名称':
+					$id('filterByName').checked=true
+					break
+				case 'help':
+				case '说明':
+				case '匹配说明':
+					$id('filterByHelpString').checked=true
+					break
+				case 'label':
+				case '标签':
+				case '匹配标签':
+					$id('filterByLabel').checked=true
+					break
+				default:
+					return
+					break
+			}
+		}
+	} else {
+		$id('filterByName').checked=true
+	}
+
+	if(theRequest.vermode){
+		switch(theRequest.vermode){
+			case '0':
+			case '等于':
+			case '等于指定版本':
+				$id('versionMode').selectedIndex=0
+				break
+			case '1':
+			case '不高于':
+			case '不高于指定版本':
+				$id('versionMode').selectedIndex=1
+				break
+			case '2':
+			case '不低于':
+			case '不低于指定版本':
+				$id('versionMode').selectedIndex=2
+				break
+			case '3':
+			case '高于':
+			case '高于指定版本':
+				$id('versionMode').selectedIndex=3
+				break
+			default:
+				return
+		}
+	}
+
+	if(theRequest.keymode){
+		switch(theRequest.keymode){
+			case '0':
+			case '局部与':
+			case '局部与匹配':
+				$id('filterMode').selectedIndex=0
+				break
+			case '1':
+			case '局部或':
+			case '局部或匹配':
+				$id('filterMode').selectedIndex=1
+				break
+			case '2':
+			case '头部':
+			case '头部匹配':
+				$id('filterMode').selectedIndex=2
+				break
+			case '3':
+			case '尾部':
+			case '尾部匹配':
+				$id('filterMode').selectedIndex=3
+				break
+			case '4':
+			case '完全':
+			case '完全匹配':
+				$id('filterMode').selectedIndex=4
+				break
+			default:
+				return
+		}
+	}
+
+	function Batch_CN(theRequest,key,filterby,vermode,keymode,bDownload){
+		theRequest.key = key
+		theRequest.filterby = filterby
+		theRequest.vermode = vermode
+		theRequest.keymode = keymode
+		if(bDownload)theRequest.down = strName
+		return theRequest
+	}
+}
+
+
+function setBaseColor(color){
+	color = color.replace(/^\s+|\s+$/g,'')
+
+	$id('about').style.backgroundColor = color
+	$id('headdiv').style.borderBottomColor = color
+
+	$id('demo10').getElementsByTagName('div')[0].style.backgroundColor = 
+	$id('demo9').getElementsByTagName('div')[0].style.backgroundColor = 
+	$id('demo8').getElementsByTagName('div')[0].style.backgroundColor = 
+	$id('demo7').getElementsByTagName('div')[0].style.backgroundColor = 
+	$id('demo6').getElementsByTagName('div')[0].style.backgroundColor = 
+	$id('demo5').getElementsByTagName('div')[0].style.backgroundColor = 
+	$id('demo4').getElementsByTagName('div')[0].style.backgroundColor = 
+	$id('demo3').getElementsByTagName('div')[0].style.backgroundColor = 
+	$id('demo2').getElementsByTagName('div')[0].style.backgroundColor = 
+	$id('demo1').getElementsByTagName('div')[0].style.backgroundColor = color
+
+	$id('textdiv').style.borderBottomColor = color
+
+	$id('textpre_shadow').style.backgroundColor = color
+	$id('textpre').style.borderColor = color
+
+	$id('myurl').innerHTML = (location.href.replace(/[#\?].*/,'') + '?' + getMyUrl(false/*localColor!==baseColor*/)).replace(/\?+$/,'')
+}
+
+
+var interval_freshTable
+
+function freshTable(bForce){
+	$id('myurl').innerHTML = (location.href.replace(/[#\?].*/,'') + '?' + getMyUrl(false/*localColor!==baseColor*/)).replace(/\?+$/,'')
+	var Key = $id('key').value.replace(/^\s+|\s+$/g,'')
+
+	if(!Key&&!bForce){
+		if(interval_freshTable)interval_freshTable=clearInterval(interval_freshTable)
+		showHelp()
+		findInput_cache = {}
+	} else {
+		if($id('key').value===findInput_cache.key&&!bForce)return
+		if(interval_freshTable)interval_freshTable=clearInterval(interval_freshTable)
+
+		showTable()
+		interval_freshTable = setInterval(
+			function(){
+				if(MiniTools.test()){
+					findInput(Key,bForce)
+					if(interval_freshTable)interval_freshTable=clearInterval(interval_freshTable)
+				} else if(MiniTools.list()===false){
+					$id('table').innerHTML = '<table><tr><th align="center" style="background:#CCCCCC" colspan="5"}><div class=textcenter>列表加载失败!</div></th></tr></table>'
+					if(interval_freshTable)interval_freshTable=clearInterval(interval_freshTable)
+				} else {
+					$id('table').innerHTML = '<table><tr><th align="center" colspan="5"}><div class=textcenter>列表加载中</div></th></tr></table>'
+				}
+			},
+			1
+		)
+	}
+}
+
+function testUrl(url){
+	var myFullUrl = (location.href.replace(/[#\?].*/,'') + '?' + getMyUrl(false/*localColor!==baseColor*/)).replace(/\?+$/,'')
+	if(myFullUrl !==url){
+		var prompt = '要复制的地址与当前配置不符，确定要复制？'
+		if(!confirm(prompt))return false
+	}
+	if(/filterby=(&|$)/.test(myFullUrl)){
+		var prompt = '当前未指定匹配条件（匹配名称 / 匹配说明 / 匹配标签），确定要复制？'
+		if(!confirm(prompt))return false
+	}
+	return true
+}
+
+function getMyUrl(bCheckColor){
+	var domainList = ['.bathome.net','bcn.bathome.net']
+
+	var value = []
+	var filterby
+
+	if($id('key').value)value.push('key=' + encodeURIComponent($id('key').value))
+	if($id('filterMode').selectedIndex!==0)value.push('keymode=' + $id('filterMode').selectedIndex)
+	if($id('versionMode').selectedIndex!==0)value.push('vermode=' + $id('versionMode').selectedIndex)
+
+	if(!$id('filterByName').checked || !$id('filterByHelpString').checked || !$id('filterByLabel').checked){
+		filterby = []
+		if($id('filterByName').checked)filterby.push('name')
+		if($id('filterByHelpString').checked)filterby.push('help')
+		if($id('filterByLabel').checked)filterby.push('label')
+	}
+
+	if(bCheckColor)value.push('color=' + encodeURIComponent(baseColor))
+	if(filterby instanceof Array)value.push('filterby=' + filterby.join(','))
+
+	return value.join('&');
+}
+
+function getCode(Name,Note){
+	clearInterval(interval_list2table)
+
+	Name = MiniTools.find(Name).bathomePath == MiniTools.find(Name.replace(/.*\//,'')).bathomePath ? Name.replace(/.*\//,'') : Name
+
+	switch(Note){
+		case 'BAT':
+			var Code=
+				'@echo off\r\n'+
+				'\r\n'+
+				'::调用批处理之家在线 HTA 脚本实现快速管理第三方工具\r\n'+
+				'\r\n'+
+				'mshta http://bathome.net/s/hta/index.html Tools.get(\'#\')\r\n'+
+				'::若找不到同名命令，则下载到当前路径\r\n'+
+				'\r\n'+
+				'mshta http://bathome.net/s/hta/index.html help(Tools.get,true,true)|more\r\n'+
+				'::查看 Tools.get 方法的帮助信息\r\n'+
+				'\r\n'+
+				'pause'
+			break
+		case 'HTA':
+			var Code=
+				'<script src=http://bbs.bathome.net/lib/diy/hide.js><\/script>\r\n'+
+				'<script src=http://bbs.bathome.net/lib/diy/Tools.js><\/script>\r\n'+
+				'\r\n'+
+				'<script>\r\n'+
+				'Tools.get(\'#\')\r\n'+
+				'//调用 Tools 对象的 get 方法在线获取第三方工具\r\n'+
+				'//引用 Batch-CN 的集成资源，感谢 bailong360 提供帮助\r\n'+
+				'//依赖批处理之家脚本库：http://www.bathome.net/thread-34544-1-1.html\r\n'+
+				'<\/script>'
+			break
+		default:
+			showHelp()
+			return
+	}
+
+	showTable()
+
+	Code = encodeHtml(Code.replace('#',Name))
+	$id('table').innerHTML = '<hr /><input type="button" value=X onclick=freshTable(true) style="float:right;width:25px;height:25px;" /><b>['+Note+']</b> 调用<a href=http://www.bathome.net/thread-34544-1-1.html>批处理之家脚本库</a>下载 "'+encodeHtml(Name)+'"<hr /><div style="margin:30px 0px 30px 0px"><span><pre>'+Code+'</pre></span></div><hr />'
+
+}
+
+function clearSetting(){
+	localColor = 
+	baseColor = '#469CE8'
+	setBaseColor(baseColor)
+
+	$id('key').value=''
+
+
+	$id('filterByName').checked=
+	$id('filterByHelpString').checked=
+	$id('filterByLabel').checked=true
+
+	$id('versionMode').selectedIndex=0
+	$id('filterMode').selectedIndex=0
+
+	freshTable()
+
+	saveSetting(0,true)
+	alert('已重置设置')
+}
+
+function saveSetting(expiredays,do_not_ask){
+	var domainList = ['.bathome.net','bcn.bathome.net']
+
+	if(!do_not_ask){
+		var prompt = 
+				'将保存以下设置：\n\n' +
+				'  初始关键词 = '+$id('key').value +'\n'+
+				'  匹配条件 = ' + $id('filterByName').checked + '\n' +
+				'  匹配说明 = ' + $id('filterByHelpString').checked + '\n' +
+				'  匹配标签 = ' + $id('filterByLabel').checked + '\n\n' +
+				'  匹配位置 = ' + $id('filterMode').options[$id('filterMode').selectedIndex].innerText + '\n' +
+				'  版本限制 = ' + $id('versionMode').options[$id('versionMode').selectedIndex].innerText + '\n\n' +
+				'  配色方案 = ' + baseColor
+
+		if(!confirm(prompt))return
+	}
+	var value = getMyUrl(true/*localColor!==baseColor*/)
+
+	for(var i=0;i<domainList.length;i++){
+		setCookie('s','',0)
+		setCookie('s',value,expiredays,domainList[i])
+	}
+
+	if(!do_not_ask)alert('保存成功，下次进入本页面时默认使用当前设置\n使用带参数的分享地址访问时，将只有颜色设置生效')
+}
+
+function showTable(){
+	$id('table').style.display = 'block'
+	$id('help').style.display = 'none'
+}
+
+function showHelp(){
+	$id('table').style.display = 'none'
+	$id('help').style.display = 'block'
+	if(!/\S/.test(findInput_cache.key)){
+		$id('table').innerHTML = '<table><tr><th align="center" style="background:#CCCCCC" colspan="5"}><div class=textcenter>正在筛选</div></th></tr></table>'
+	}
+}
+
+function colors_onmouseover(ele){
+	setBaseColor(ele.style.backgroundColor)
+	$id('about').innerHTML=ele.innerText
+	return false
+}
+
+function colors_onmouseout(){
+	setBaseColor(baseColor)
+	return false
+}
+
+function encodeHtml(s){
+	var REGX_HTML_ENCODE = /"|&|'|<|>|[\x00-\x20]|[\x7F-\xFF]|[\u0100-\u2700]/g;
+	return (typeof s != "string") ? s :
+		s.replace(REGX_HTML_ENCODE,
+			function($0){
+				var c = $0.charCodeAt(0), r = ["&#"];
+				c = (c == 0x20) ? 0xA0 : c;
+				r.push(c); r.push(";");
+				return r.join("");
+			});
+}
+
+function setCookie(c_name,value,expiredays,domain)
+{
+var exdate=new Date()
+exdate.setDate(exdate.getDate()+expiredays)
+document.cookie=c_name+ "=" +encodeURIComponent(value)+
+((expiredays==null) ? "" : ";expires="+exdate.toGMTString())+
+((domain==null) ? "" : ";domain="+encodeURIComponent(domain))
+}
+
+function getCookie(c_name)
+{
+if (document.cookie.length>0)
+  {
+  c_start=document.cookie.indexOf(c_name + "=")
+  if (c_start!=-1)
+    { 
+    c_start=c_start + c_name.length+1 
+    c_end=document.cookie.indexOf(";",c_start)
+    if (c_end==-1) c_end=document.cookie.length
+    return decodeURIComponent(document.cookie.substring(c_start,c_end))
+    } 
+  }
+return ""
+}
+
+
+//阻止浏览器的默认行为 
+function stopDefault( e ) { 
+    //阻止默认浏览器动作(W3C) 
+
+    if ( e && e.preventDefault ) 
+        e.preventDefault(); 
+    //IE中阻止函数器默认动作的方式 
+    else
+        window.event.returnValue = false;
+
+    try{
+        e.cancelBubble = true;
+    }
+    catch(Err){
+        window.event.cancelBubble = true;
+    }
+
+    return false; 
+}
+
+function colors_onclick(color){
+	localColor=''
+	setBaseColor(baseColor=color)
+}
+
+function pushState(){
+	if(history.pushState instanceof Function){
+		var state = {
+			filterByName: $id('filterByName').checked,
+			filterByHelpString: $id('filterByHelpString').checked,
+			filterByLabel: $id('filterByLabel').checked,
+			versionMode: $id('versionMode').selectedIndex,
+			filterMode: $id('filterMode').selectedIndex,
+			key: $id('key').value,
+			color: baseColor
+		}
+		history.pushState(state,document.title,'?' + getMyUrl(false))
+	}
+}
+</script> 
+  </div>   
+ </body>
+</html>
